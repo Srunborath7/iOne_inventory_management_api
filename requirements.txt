@@ -1,5 +1,8 @@
 fastapi[standard]
 uvicorn
 sqlalchemy
+alembic
 asyncpg
 pydantic-settings
+PyJWT
+python-multipart

@@ -1,3 +1,6 @@
+import asyncio
+from pathlib import Path
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -25,7 +28,17 @@ SessionLocal = async_sessionmaker(
 
 
 async def init_db():
-    print("Database connected successfully")
+    from alembic import command
+    from alembic.config import Config
+
+    project_root = Path(__file__).resolve().parents[2]
+
+    def upgrade_database() -> None:
+        alembic_config = Config(str(project_root / "alembic.ini"))
+        command.upgrade(alembic_config, "head")
+
+    await asyncio.to_thread(upgrade_database)
+    print("Database migrations applied")
 
 
 async def close_db():
