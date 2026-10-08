@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError

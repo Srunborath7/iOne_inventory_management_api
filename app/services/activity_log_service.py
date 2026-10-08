@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.core.exceptions import NotFound
 from app.domain.activity_logs.model import ActivityLog
 from app.domain.activity_logs.schema import ActivityLogCreate
