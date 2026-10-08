@@ -1,6 +1,15 @@
 .venv
+venv
 __pycache__
 *.pyc
+*.pyo
+*.pyd
 .git
+.gitignore
 .env
+.env.local
 .pytest_cache
+uploads
+.DS_Store
+tests
+RENDER_DEPLOYMENT.md

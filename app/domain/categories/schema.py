@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,3 +21,7 @@ class CategoryResponse(BaseModel):
     image_url: str | None
     created_at: datetime
     updated_at: datetime
+
+
+# Alias for compatibility
+CategoryRespone = CategoryResponse

@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.config import settings
 from app.core.database import Base
 from app.domain.auth import model as auth_model  # noqa: F401
-from app.domain.catgories import model as category_model  # noqa: F401
+from app.domain.categories import model as category_model  # noqa: F401
+from app.domain.brands import model as brand_model  # noqa: F401
+
 
 
 config = context.config

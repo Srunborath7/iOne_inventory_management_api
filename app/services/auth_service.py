@@ -5,18 +5,22 @@ import secrets
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
+from app.core.exceptions import Conflict, Unauthorized
 from app.core.security import create_access_token
 from app.domain.auth.model import Auth
 from app.domain.auth.schema import AuthCreate, AuthLogin, TokenResponse
 from app.repositories.auth_repository import AuthRepository
+from app.services.base import BaseService
 
 
-class EmailAlreadyRegistered(Exception):
-    pass
+class EmailAlreadyRegistered(Conflict):
+    def __init__(self, message: str = "An account with this email already exists."):
+        super().__init__(detail=message)
 
 
-class InvalidCredentials(Exception):
-    pass
+class InvalidCredentials(Unauthorized):
+    def __init__(self, message: str = "Incorrect email or password."):
+        super().__init__(message=message)
 
 
 def hash_password(password: str) -> str:
@@ -42,14 +46,14 @@ def verify_password(password: str, encoded_hash: str) -> bool:
         return False
 
 
-class AuthService:
+class AuthService(BaseService[AuthRepository]):
     def __init__(self, repository: AuthRepository):
-        self.repository = repository
+        super().__init__(repository)
 
     async def register(self, data: AuthCreate) -> Auth:
         email = data.email.strip().lower()
         if await self.repository.get_by_email(email):
-            raise EmailAlreadyRegistered
+            raise EmailAlreadyRegistered()
 
         try:
             return await self.repository.create(
@@ -59,12 +63,12 @@ class AuthService:
             )
         except IntegrityError as exc:
             # The unique database constraint also protects concurrent requests.
-            raise EmailAlreadyRegistered from exc
+            raise EmailAlreadyRegistered() from exc
 
     async def login(self, data: AuthLogin) -> TokenResponse:
         account = await self.repository.get_by_email(data.email.strip().lower())
         if account is None or not verify_password(data.password, account.password_hash):
-            raise InvalidCredentials
+            raise InvalidCredentials()
 
         return TokenResponse(
             access_token=create_access_token(account.id),

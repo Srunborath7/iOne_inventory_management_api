@@ -1,0 +1,36 @@
+services:
+  # FastAPI Web Service on Render
+  - type: web
+    name: inventory-management-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10080"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: AUTO_MIGRATE
+        value: "false"
+      - key: DATABASE_ECHO
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+
+databases:
+  # Managed PostgreSQL Database on Render
+  - name: inventory-db
+    databaseName: inventory_management
+    user: inventory_user
+    region: oregon
+    plan: free

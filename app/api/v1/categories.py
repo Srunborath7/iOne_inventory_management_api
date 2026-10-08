@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_account
 from app.core.database import get_db
-from app.domain.catgories.schema import CategoryCreate, CategoryResponse, CategoryUpdate
+from app.domain.categories.schema import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.repositories.category_repository import CategoryRepository
+
 from app.services.category_service import CategoryService
 
 
