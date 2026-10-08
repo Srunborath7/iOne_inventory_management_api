@@ -35,6 +35,7 @@ async def init_db():
         print("Auto-migration disabled (skipped in lifespan)")
         return
 
+    import traceback
     from alembic import command
     from alembic.config import Config
 
@@ -44,8 +45,21 @@ async def init_db():
         alembic_config = Config(str(project_root / "alembic.ini"))
         command.upgrade(alembic_config, "head")
 
-    await asyncio.to_thread(upgrade_database)
-    print("Database migrations applied successfully")
+    max_retries = 4
+    for attempt in range(1, max_retries + 1):
+        try:
+            await asyncio.to_thread(upgrade_database)
+            print("Database migrations applied successfully")
+            return
+        except Exception as exc:
+            print(f"[Attempt {attempt}/{max_retries}] Database migration failed: {exc}")
+            if attempt < max_retries:
+                await asyncio.sleep(2)
+            else:
+                traceback.print_exc()
+                print("CRITICAL: Failed to apply database migrations. Please verify DATABASE_URL and database connectivity.")
+                raise
+
 
 
 async def close_db():
