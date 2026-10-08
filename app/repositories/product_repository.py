@@ -48,8 +48,8 @@ class ProductRepository:
         barcode: str,
         brand_id: int,
         category_id: int,
-        created_by: int,
-        updated_by: int,
+        created_by: int | None = None,
+        updated_by: int | None = None,
         is_active: bool = True,
     ) -> Product:
         product = Product(

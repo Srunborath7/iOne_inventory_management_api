@@ -42,8 +42,8 @@ class Product(Base):
     # Foreign Keys
     brand_id: Mapped[int] = mapped_column(ForeignKey("brands.id", ondelete="RESTRICT"), nullable=False, index=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False, index=True)
-    created_by: Mapped[int] = mapped_column(ForeignKey("auth_accounts.id", ondelete="RESTRICT"), nullable=False, index=True)
-    updated_by: Mapped[int] = mapped_column(ForeignKey("auth_accounts.id", ondelete="RESTRICT"), nullable=False, index=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("auth_accounts.id", ondelete="RESTRICT"), nullable=True, index=True)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("auth_accounts.id", ondelete="RESTRICT"), nullable=True, index=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(BOOLEAN, default=True, nullable=False)
@@ -53,5 +53,5 @@ class Product(Base):
     # Relationships
     brand: Mapped["Brand"] = relationship(back_populates="products")
     category: Mapped["Category"] = relationship(back_populates="products")
-    creator: Mapped["Auth"] = relationship(foreign_keys=[created_by])
-    updater: Mapped["Auth"] = relationship(foreign_keys=[updated_by])
+    creator: Mapped["Auth | None"] = relationship(foreign_keys=[created_by])
+    updater: Mapped["Auth | None"] = relationship(foreign_keys=[updated_by])

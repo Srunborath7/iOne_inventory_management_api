@@ -47,7 +47,7 @@ class ProductResponse(BaseModel):
     brand_id: int
     category_id: int
     is_active: bool
-    created_by: int
-    updated_by: int
+    created_by: int | None = None
+    updated_by: int | None = None
     created_at: datetime
     updated_at: datetime

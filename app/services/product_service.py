@@ -37,7 +37,7 @@ class ProductService(BaseService[ProductRepository]):
     async def create(
         self,
         data: ProductCreate,
-        user_id: int,
+        user_id: int | None = None,
         image: UploadFile | None = None,
     ) -> Product:
         """Create a new product with business validation, audit trail, and image handling."""
@@ -75,20 +75,24 @@ class ProductService(BaseService[ProductRepository]):
             )
 
             # Log product creation activity
-            activity_repo = ActivityLogRepository(self.repository.session)
-            await activity_repo.create(
-                user_id=user_id,
-                action="CREATE",
-                entity_type="Product",
-                entity_id=product.id,
-                description=f"Created product '{product.name}' (barcode: {product.barcode})",
-            )
+            if user_id is not None:
+                try:
+                    activity_repo = ActivityLogRepository(self.repository.session)
+                    await activity_repo.create(
+                        user_id=user_id,
+                        action="CREATE",
+                        entity_type="Product",
+                        entity_id=product.id,
+                        description=f"Created product '{product.name}' (barcode: {product.barcode})",
+                    )
+                except Exception:
+                    pass
 
             return product
         except IntegrityError as exc:
             if stored_image:
                 await remove_image(image_url)
-            raise Conflict("Product with this name or barcode already exists") from exc
+            raise Conflict("Product with this name or barcode already exists or referenced brand/category does not exist") from exc
         except Exception:
             if stored_image:
                 await remove_image(image_url)
@@ -137,14 +141,17 @@ class ProductService(BaseService[ProductRepository]):
 
             # Log product update activity
             if user_id is not None:
-                activity_repo = ActivityLogRepository(self.repository.session)
-                await activity_repo.create(
-                    user_id=user_id,
-                    action="UPDATE",
-                    entity_type="Product",
-                    entity_id=updated.id,
-                    description=f"Updated product '{updated.name}'",
-                )
+                try:
+                    activity_repo = ActivityLogRepository(self.repository.session)
+                    await activity_repo.create(
+                        user_id=user_id,
+                        action="UPDATE",
+                        entity_type="Product",
+                        entity_id=updated.id,
+                        description=f"Updated product '{updated.name}'",
+                    )
+                except Exception:
+                    pass
         except IntegrityError as exc:
             if stored_image:
                 await remove_image(stored_image[0])
@@ -169,14 +176,17 @@ class ProductService(BaseService[ProductRepository]):
 
         # Log product deletion activity
         if user_id is not None:
-            activity_repo = ActivityLogRepository(self.repository.session)
-            await activity_repo.create(
-                user_id=user_id,
-                action="DELETE",
-                entity_type="Product",
-                entity_id=product_id,
-                description=f"Deleted product '{product_name}'",
-            )
+            try:
+                activity_repo = ActivityLogRepository(self.repository.session)
+                await activity_repo.create(
+                    user_id=user_id,
+                    action="DELETE",
+                    entity_type="Product",
+                    entity_id=product_id,
+                    description=f"Deleted product '{product_name}'",
+                )
+            except Exception:
+                pass
 
         if image_url:
             await remove_image(image_url)

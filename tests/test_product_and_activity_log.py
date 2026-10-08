@@ -121,5 +121,29 @@ class TestProductAndActivityLog(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_kwargs["updated_by"], 5)
 
 
+    def test_product_schema_nullable_audit_fields(self):
+        """Verify that ProductResponse handles None created_by and updated_by."""
+        resp = ProductResponse(
+            id=2,
+            name="Keyboard",
+            description=None,
+            image_url=None,
+            selling_price=Decimal("50.00"),
+            cost_price=Decimal("30.00"),
+            min_stock=2,
+            max_stock=20,
+            barcode="KB-12345",
+            brand_id=1,
+            category_id=1,
+            is_active=True,
+            created_by=None,
+            updated_by=None,
+            created_at="2026-10-08T12:00:00Z",
+            updated_at="2026-10-08T12:00:00Z",
+        )
+        self.assertIsNone(resp.created_by)
+        self.assertIsNone(resp.updated_by)
+
+
 if __name__ == "__main__":
     unittest.main()

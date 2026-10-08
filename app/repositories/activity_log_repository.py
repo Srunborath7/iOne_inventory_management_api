@@ -45,7 +45,7 @@ class ActivityLogRepository:
             .limit(limit)
         )
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        return list(result.scalars().unique().all())
 
     async def create(
         self,
