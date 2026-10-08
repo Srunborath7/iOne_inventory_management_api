@@ -1,11 +1,15 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from app.domain.products.model import Product
+    
 class Brand(Base):
     __tablename__ = "brands"
 
@@ -23,4 +27,10 @@ class Brand(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+    # One brand can have many products.
+    products: Mapped[list["Product"]] = relationship(
+        back_populates="brand",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )

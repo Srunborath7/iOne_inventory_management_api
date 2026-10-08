@@ -57,8 +57,8 @@ async def init_db():
                 await asyncio.sleep(2)
             else:
                 traceback.print_exc()
-                print("CRITICAL: Failed to apply database migrations. Please verify DATABASE_URL and database connectivity.")
-                raise
+                print("WARNING: Could not connect to database on startup. Please ensure DATABASE_URL in Render is set to your remote PostgreSQL instance (not localhost). Server will start in degraded mode.")
+
 
 
 
