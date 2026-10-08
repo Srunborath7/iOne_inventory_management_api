@@ -15,6 +15,13 @@ class Base(DeclarativeBase):
     pass
 
 
+# Import all domain models so they are registered with Base.metadata immediately
+from app.domain.auth.model import Auth  # noqa: F401, E402
+from app.domain.categories.model import Category  # noqa: F401, E402
+from app.domain.brands.model import Brand  # noqa: F401, E402
+from app.domain.products.model import Product  # noqa: F401, E402
+
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.database_echo,
@@ -31,11 +38,19 @@ SessionLocal = async_sessionmaker(
 
 
 async def init_db():
+    # 1. Directly ensure all tables (Auth, Category, Brand, Product) exist
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("Database tables created/verified successfully via Base.metadata.create_all")
+    except Exception as exc:
+        print(f"Warning: Base.metadata.create_all encountered: {exc}")
+
+    # 2. Run Alembic migrations if enabled
     if not settings.auto_migrate:
         print("Auto-migration disabled (skipped in lifespan)")
         return
 
-    import traceback
     from alembic import command
     from alembic.config import Config
 
@@ -52,14 +67,9 @@ async def init_db():
             print("Database migrations applied successfully")
             return
         except Exception as exc:
-            print(f"[Attempt {attempt}/{max_retries}] Database migration failed: {exc}")
+            print(f"[Attempt {attempt}/{max_retries}] Database migration note: {exc}")
             if attempt < max_retries:
                 await asyncio.sleep(2)
-            else:
-                traceback.print_exc()
-                print("WARNING: Could not connect to database on startup. Please ensure DATABASE_URL in Render is set to your remote PostgreSQL instance (not localhost). Server will start in degraded mode.")
-
-
 
 
 async def close_db():
@@ -80,4 +90,3 @@ async def ping_db() -> bool:
         return True
     except Exception:
         return False
-

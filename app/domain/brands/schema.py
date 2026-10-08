@@ -12,7 +12,7 @@ class BrandUpdate(BaseModel):
     description: str | None = None
 
 
-class BrandRespone(BaseModel):
+class BrandResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -23,5 +23,5 @@ class BrandRespone(BaseModel):
     updated_at: datetime
 
 
-# Alias
-BrandResponse = BrandRespone
+# Alias to support both spellings
+BrandRespone = BrandResponse

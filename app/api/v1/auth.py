@@ -1,5 +1,5 @@
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,14 +28,22 @@ def unauthorized() -> HTTPException:
 
 
 async def get_current_account(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     session: AsyncSession = Depends(get_db),
 ) -> Auth:
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    token: str | None = None
+
+    if credentials and credentials.scheme.lower() == "bearer":
+        token = credentials.credentials
+    elif "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    if not token:
         raise unauthorized()
 
     try:
-        account_id = decode_access_token(credentials.credentials)
+        account_id = decode_access_token(token)
     except jwt.InvalidTokenError:
         raise unauthorized() from None
 
@@ -67,17 +75,34 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     data: AuthLogin,
+    response: Response,
     session: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     service = AuthService(AuthRepository(session))
     try:
-        return await service.login(data)
+        token_data = await service.login(data)
+        # Store JWT in HttpOnly cookie for browser sessions
+        response.set_cookie(
+            key="access_token",
+            value=token_data.access_token,
+            max_age=token_data.expires_in,
+            httponly=True,
+            samesite="lax",
+            secure=False,
+        )
+        return token_data
     except InvalidCredentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
             headers={"WWW-Authenticate": "Bearer"},
         ) from None
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="access_token")
+    return {"message": "Successfully logged out"}
 
 
 @router.get("/me", response_model=AuthResponse)

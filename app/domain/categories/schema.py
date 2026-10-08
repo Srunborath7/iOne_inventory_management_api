@@ -22,6 +22,3 @@ class CategoryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-
-# Alias for compatibility
-CategoryRespone = CategoryResponse
