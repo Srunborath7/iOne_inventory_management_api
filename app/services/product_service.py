@@ -6,6 +6,7 @@ from app.core.exceptions import BadRequest, Conflict, NotFound
 from app.core.upload import remove_image, save_image
 from app.domain.products.model import Product
 from app.domain.products.schema import ProductCreate, ProductUpdate
+from app.repositories.activity_log_repository import ActivityLogRepository
 from app.repositories.product_repository import ProductRepository
 from app.services.base import BaseService
 
@@ -13,7 +14,8 @@ from app.services.base import BaseService
 class ProductService(BaseService[ProductRepository]):
     """
     Business Logic Layer for Products (OOP - Encapsulation & Separation of Concerns).
-    Encapsulates product business rules, image management, stock rules, and validation.
+    Encapsulates product business rules, image management, stock rules, validation,
+    and audit activity logging.
     """
 
     UPLOAD_FOLDER: str = "products"
@@ -35,9 +37,10 @@ class ProductService(BaseService[ProductRepository]):
     async def create(
         self,
         data: ProductCreate,
+        user_id: int,
         image: UploadFile | None = None,
     ) -> Product:
-        """Create a new product with business validation and image handling."""
+        """Create a new product with business validation, audit trail, and image handling."""
         name = data.name.strip()
         if not name:
             raise BadRequest("Product name cannot be empty")
@@ -56,7 +59,7 @@ class ProductService(BaseService[ProductRepository]):
         image_url = stored_image[0] if stored_image else data.image_url
 
         try:
-            return await self.repository.create(
+            product = await self.repository.create(
                 name=name,
                 description=data.description,
                 image_url=image_url,
@@ -67,7 +70,21 @@ class ProductService(BaseService[ProductRepository]):
                 barcode=barcode,
                 brand_id=data.brand_id,
                 category_id=data.category_id,
+                created_by=user_id,
+                updated_by=user_id,
             )
+
+            # Log product creation activity
+            activity_repo = ActivityLogRepository(self.repository.session)
+            await activity_repo.create(
+                user_id=user_id,
+                action="CREATE",
+                entity_type="Product",
+                entity_id=product.id,
+                description=f"Created product '{product.name}' (barcode: {product.barcode})",
+            )
+
+            return product
         except IntegrityError as exc:
             if stored_image:
                 await remove_image(image_url)
@@ -81,9 +98,10 @@ class ProductService(BaseService[ProductRepository]):
         self,
         product_id: int,
         data: ProductUpdate,
+        user_id: int | None = None,
         image: UploadFile | None = None,
     ) -> Product:
-        """Update an existing product, handling unique constraints and image replacement."""
+        """Update an existing product, handling unique constraints, audit trail, and image replacement."""
         product = await self.get(product_id)
         changes = data.model_dump(exclude_unset=True)
 
@@ -105,6 +123,9 @@ class ProductService(BaseService[ProductRepository]):
                 raise Conflict("Product barcode already exists")
             changes["barcode"] = barcode
 
+        if user_id is not None:
+            changes["updated_by"] = user_id
+
         stored_image = await save_image(image, self.UPLOAD_FOLDER)
         old_image_url = product.image_url
 
@@ -113,6 +134,17 @@ class ProductService(BaseService[ProductRepository]):
 
         try:
             updated = await self.repository.update(product, changes)
+
+            # Log product update activity
+            if user_id is not None:
+                activity_repo = ActivityLogRepository(self.repository.session)
+                await activity_repo.create(
+                    user_id=user_id,
+                    action="UPDATE",
+                    entity_type="Product",
+                    entity_id=updated.id,
+                    description=f"Updated product '{updated.name}'",
+                )
         except IntegrityError as exc:
             if stored_image:
                 await remove_image(stored_image[0])
@@ -127,12 +159,24 @@ class ProductService(BaseService[ProductRepository]):
 
         return updated
 
-    async def delete(self, product_id: int) -> None:
-        """Delete a product and its associated image file."""
+    async def delete(self, product_id: int, user_id: int | None = None) -> None:
+        """Delete a product, log the activity, and clean up its associated image file."""
         product = await self.get(product_id)
         image_url = product.image_url
+        product_name = product.name
 
         await self.repository.delete(product)
+
+        # Log product deletion activity
+        if user_id is not None:
+            activity_repo = ActivityLogRepository(self.repository.session)
+            await activity_repo.create(
+                user_id=user_id,
+                action="DELETE",
+                entity_type="Product",
+                entity_id=product_id,
+                description=f"Deleted product '{product_name}'",
+            )
 
         if image_url:
             await remove_image(image_url)

@@ -48,6 +48,8 @@ class ProductRepository:
         barcode: str,
         brand_id: int,
         category_id: int,
+        created_by: int,
+        updated_by: int,
         is_active: bool = True,
     ) -> Product:
         product = Product(
@@ -61,6 +63,8 @@ class ProductRepository:
             barcode=barcode,
             brand_id=brand_id,
             category_id=category_id,
+            created_by=created_by,
+            updated_by=updated_by,
             is_active=is_active,
         )
         self.session.add(product)

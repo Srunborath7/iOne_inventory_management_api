@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_account
 from app.core.database import get_db
+from app.domain.auth.model import Auth
 from app.domain.products.schema import ProductCreate, ProductResponse, ProductUpdate
 from app.repositories.product_repository import ProductRepository
 from app.services.product_service import ProductService
@@ -35,6 +36,7 @@ ServiceDep = Annotated[ProductService, Depends(get_service)]
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
     service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
     name: Annotated[str, Form(min_length=1, max_length=150)],
     selling_price: Annotated[Decimal, Form(gt=0)],
     cost_price: Annotated[Decimal, Form(gt=0)],
@@ -57,7 +59,7 @@ async def create_product(
         brand_id=brand_id,
         category_id=category_id,
     )
-    return await service.create(data, image)
+    return await service.create(data=data, user_id=current_account.id, image=image)
 
 
 @router.get("", response_model=list[ProductResponse])
@@ -78,6 +80,7 @@ async def get_product(product_id: int, service: ServiceDep) -> ProductResponse:
 async def update_product(
     product_id: int,
     service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
     name: Annotated[str | None, Form(min_length=1, max_length=150)] = None,
     description: Annotated[str | None, Form()] = None,
     selling_price: Annotated[Decimal | None, Form(gt=0)] = None,
@@ -112,9 +115,18 @@ async def update_product(
     if is_active is not None:
         values["is_active"] = is_active
 
-    return await service.update(product_id, ProductUpdate(**values), image)
+    return await service.update(
+        product_id=product_id,
+        data=ProductUpdate(**values),
+        user_id=current_account.id,
+        image=image,
+    )
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_product(product_id: int, service: ServiceDep) -> None:
-    await service.delete(product_id)
+async def delete_product(
+    product_id: int,
+    service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
+) -> None:
+    await service.delete(product_id=product_id, user_id=current_account.id)

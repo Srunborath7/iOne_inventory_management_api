@@ -3,6 +3,7 @@ from app.repositories.auth_repository import AuthRepository
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.brand_repository import BrandRepository
 from app.repositories.product_repository import ProductRepository
+from app.repositories.activity_log_repository import ActivityLogRepository
 
 __all__ = [
     "BaseRepository",
@@ -10,4 +11,6 @@ __all__ = [
     "CategoryRepository",
     "BrandRepository",
     "ProductRepository",
+    "ActivityLogRepository",
 ]
+

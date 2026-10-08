@@ -22,3 +22,7 @@ class CategoryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+CategoryRespone = CategoryResponse
+
+

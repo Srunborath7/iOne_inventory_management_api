@@ -15,13 +15,6 @@ class Base(DeclarativeBase):
     pass
 
 
-# Import all domain models so they are registered with Base.metadata immediately
-from app.domain.auth.model import Auth  # noqa: F401, E402
-from app.domain.categories.model import Category  # noqa: F401, E402
-from app.domain.brands.model import Brand  # noqa: F401, E402
-from app.domain.products.model import Product  # noqa: F401, E402
-
-
 engine = create_async_engine(
     settings.database_url,
     echo=settings.database_echo,
@@ -37,8 +30,20 @@ SessionLocal = async_sessionmaker(
 )
 
 
+def import_all_models() -> None:
+    """Import all domain models so they are registered with Base.metadata."""
+    import app.domain.auth.model  # noqa: F401
+    import app.domain.categories.model  # noqa: F401
+    import app.domain.brands.model  # noqa: F401
+    import app.domain.products.model  # noqa: F401
+    import app.domain.activity_logs.model  # noqa: F401
+
+
 async def init_db():
-    # 1. Directly ensure all tables (Auth, Category, Brand, Product) exist
+    # Ensure all domain models are imported and attached to Base.metadata
+    import_all_models()
+
+    # 1. Directly ensure all tables (Auth, Category, Brand, Product, ActivityLog) exist
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
