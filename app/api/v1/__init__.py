@@ -5,6 +5,7 @@ from app.api.v1.categories import router as categories_router
 from app.api.v1.brand import router as brand_router
 from app.api.v1.product import router as product_router
 from app.api.v1.activity_logs import router as activity_logs_router
+from app.api.v1.suppliers import router as suppliers_router
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -12,4 +13,5 @@ router.include_router(categories_router)
 router.include_router(brand_router)
 router.include_router(product_router)
 router.include_router(activity_logs_router)
+router.include_router(suppliers_router)
 
