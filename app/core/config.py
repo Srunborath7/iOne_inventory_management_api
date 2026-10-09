@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(min_length=32)
     access_token_expire_minutes: int = 10080
     upload_dir: Path = Field(default=PROJECT_ROOT / "uploads")
-    cors_origins: str = "*"
+    cors_origins: str = (
+        "https://i-one-inventory-management-website.vercel.app,http://localhost:3000"
+    )
     auto_migrate: bool = True
     database_echo: bool = False
     environment: str = "production"
