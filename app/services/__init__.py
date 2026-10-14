@@ -11,6 +11,7 @@ from app.services.warehouses_inventory_service import (
     WarehousesInventoryService,
 )
 from app.services.stock_transfer_service import StockTransferService
+from app.services.customers_service import CustomersService
 
 __all__ = [
     "BaseService",
@@ -25,4 +26,5 @@ __all__ = [
     "WarehousesInventoryService",
     "WarehouseInventoryService",
     "StockTransferService",
+    "CustomersService",
 ]
