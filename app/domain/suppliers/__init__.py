@@ -1,5 +1,8 @@
-from app.domain.suppliers.model import Suppliers
+from app.domain.suppliers.model import Supplier, Suppliers
 from app.domain.suppliers.schema import (
+    SupplierCreate,
+    SupplierResponse,
+    SupplierUpdate,
     SuppliersCreate,
     SuppliersResponse,
     SuppliersUpdate,
@@ -7,7 +10,11 @@ from app.domain.suppliers.schema import (
 
 __all__ = [
     "Suppliers",
+    "Supplier",
     "SuppliersCreate",
+    "SupplierCreate",
     "SuppliersResponse",
+    "SupplierResponse",
     "SuppliersUpdate",
+    "SupplierUpdate",
 ]

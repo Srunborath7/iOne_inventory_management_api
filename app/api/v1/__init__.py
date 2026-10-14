@@ -1,11 +1,12 @@
 from fastapi import APIRouter
 
-from app.api.v1.auth import router as auth_router
-from app.api.v1.categories import router as categories_router
-from app.api.v1.brand import router as brand_router
-from app.api.v1.product import router as product_router
 from app.api.v1.activity_logs import router as activity_logs_router
+from app.api.v1.auth import router as auth_router
+from app.api.v1.brand import router as brand_router
+from app.api.v1.categories import router as categories_router
+from app.api.v1.product import router as product_router
 from app.api.v1.suppliers import router as suppliers_router
+from app.api.v1.warehouses import router as warehouses_router
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -14,4 +15,4 @@ router.include_router(brand_router)
 router.include_router(product_router)
 router.include_router(activity_logs_router)
 router.include_router(suppliers_router)
-
+router.include_router(warehouses_router)

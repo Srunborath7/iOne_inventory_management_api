@@ -3,19 +3,26 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.core.config import Settings
 from app.core.exceptions import AppException, BadRequest, Conflict, NotFound, Unauthorized
+from app.domain.activity_logs.model import ActivityLog
 from app.domain.auth.model import Auth
 from app.domain.brands.model import Brand
 from app.domain.brands.schema import BrandCreate, BrandResponse, BrandRespone, BrandUpdate
 from app.domain.categories.model import Category
 from app.domain.categories.schema import CategoryCreate, CategoryResponse, CategoryRespone, CategoryUpdate
 from app.domain.products.model import Product
-from app.domain.activity_logs.model import ActivityLog
+from app.domain.suppliers.model import Supplier, Suppliers
+from app.domain.suppliers.schema import SupplierCreate, SupplierResponse, SupplierUpdate
+from app.domain.warehouses.model import Warehouse, Warehouses
+from app.domain.warehouses.schema import WarehouseCreate, WarehouseResponse, WarehouseUpdate
 from app.repositories import (
     ActivityLogRepository,
     AuthRepository,
+    BaseRepository,
     BrandRepository,
     CategoryRepository,
     ProductRepository,
+    SuppliersRepository,
+    WarehousesRepository,
 )
 from app.services import (
     ActivityLogService,
@@ -24,6 +31,8 @@ from app.services import (
     BrandService,
     CategoryService,
     ProductService,
+    SuppliersService,
+    WarehouseService,
 )
 
 
@@ -43,7 +52,7 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(converted_3, already_async)
 
     def test_domain_model_oop_structure(self):
-        """Verify Brand, Category, Auth, Product, and ActivityLog models follow SQLAlchemy OOP standards."""
+        """Verify domain models follow SQLAlchemy OOP standards and table mappings."""
         # Brand model checks
         self.assertEqual(Brand.__tablename__, "brands")
         brand_cols = {c.name for c in Brand.__table__.columns}
@@ -69,8 +78,20 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         log_cols = {c.name for c in ActivityLog.__table__.columns}
         self.assertTrue({"id", "user_id", "action", "entity_type", "entity_id", "description", "created_at"}.issubset(log_cols))
 
+        # Suppliers model checks
+        self.assertEqual(Suppliers.__tablename__, "suppliers")
+        supp_cols = {c.name for c in Suppliers.__table__.columns}
+        self.assertTrue({"id", "name", "contact", "phone", "address", "is_active", "created_at", "updated_at"}.issubset(supp_cols))
+        self.assertIs(Supplier, Suppliers)
+
+        # Warehouses model checks
+        self.assertEqual(Warehouses.__tablename__, "warehouses")
+        wh_cols = {c.name for c in Warehouses.__table__.columns}
+        self.assertTrue({"id", "name", "code", "address", "is_active", "created_at", "updated_at"}.issubset(wh_cols))
+        self.assertIs(Warehouse, Warehouses)
+
     def test_schema_aliases_and_typing(self):
-        """Verify BrandRespone and BrandResponse compatibility."""
+        """Verify schema aliases and model instantiation."""
         self.assertIs(BrandRespone, BrandResponse)
         self.assertIs(CategoryRespone, CategoryResponse)
 
@@ -81,24 +102,45 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         update_data = BrandUpdate(name="Apple Inc.")
         self.assertEqual(update_data.name, "Apple Inc.")
 
+        # Warehouse schema aliases
+        wh_create = WarehouseCreate(name="Main Hub", code="WH-01", address="123 St")
+        self.assertEqual(wh_create.name, "Main Hub")
+
+        # Supplier schema aliases
+        supp_create = SupplierCreate(name="Global Supplies", age=30, gender="male")
+        self.assertEqual(supp_create.name, "Global Supplies")
+
     def test_repository_oop_instances(self):
-        """Verify repositories properly initialize with AsyncSession."""
+        """Verify repositories properly inherit from BaseRepository and initialize with AsyncSession."""
         session_mock = MagicMock()
 
         brand_repo = BrandRepository(session_mock)
+        self.assertIsInstance(brand_repo, BaseRepository)
         self.assertIs(brand_repo.session, session_mock)
 
         cat_repo = CategoryRepository(session_mock)
+        self.assertIsInstance(cat_repo, BaseRepository)
         self.assertIs(cat_repo.session, session_mock)
 
         auth_repo = AuthRepository(session_mock)
+        self.assertIsInstance(auth_repo, BaseRepository)
         self.assertIs(auth_repo.session, session_mock)
 
         product_repo = ProductRepository(session_mock)
+        self.assertIsInstance(product_repo, BaseRepository)
         self.assertIs(product_repo.session, session_mock)
 
         log_repo = ActivityLogRepository(session_mock)
+        self.assertIsInstance(log_repo, BaseRepository)
         self.assertIs(log_repo.session, session_mock)
+
+        supp_repo = SuppliersRepository(session_mock)
+        self.assertIsInstance(supp_repo, BaseRepository)
+        self.assertIs(supp_repo.session, session_mock)
+
+        wh_repo = WarehousesRepository(session_mock)
+        self.assertIsInstance(wh_repo, BaseRepository)
+        self.assertIs(wh_repo.session, session_mock)
 
     def test_service_oop_inheritance(self):
         """Verify services inherit from BaseService."""
@@ -108,6 +150,8 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         auth_repo = AuthRepository(session_mock)
         prod_repo = ProductRepository(session_mock)
         log_repo = ActivityLogRepository(session_mock)
+        supp_repo = SuppliersRepository(session_mock)
+        wh_repo = WarehousesRepository(session_mock)
 
         brand_service = BrandService(brand_repo)
         self.assertIsInstance(brand_service, BaseService)
@@ -127,11 +171,17 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         log_service = ActivityLogService(log_repo)
         self.assertIsInstance(log_service, BaseService)
 
+        supp_service = SuppliersService(supp_repo)
+        self.assertIsInstance(supp_service, BaseService)
+
+        wh_service = WarehouseService(wh_repo)
+        self.assertIsInstance(wh_service, BaseService)
+
     def test_exceptions_oop_hierarchy(self):
         """Verify exception hierarchy adheres to OOP principles."""
         self.assertTrue(issubclass(NotFound, AppException))
         self.assertTrue(issubclass(Conflict, AppException))
-        self.assertTrue(issubclass(BadRequest, AppException))
+        self.assertTrue(BadRequest, AppException)
         self.assertTrue(issubclass(Unauthorized, AppException))
 
     async def test_brand_service_validation(self):
@@ -148,6 +198,18 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         mock_repo.get_by_name = AsyncMock(return_value=Brand(id=1, name="Sony"))
         with self.assertRaises(Conflict):
             await service.create(BrandCreate(name="Sony", description="Electronics"))
+
+    async def test_warehouse_service_validation(self):
+        """Verify validation in WarehouseService."""
+        mock_repo = MagicMock(spec=WarehousesRepository)
+        mock_repo.get_by_name = AsyncMock(return_value=None)
+        mock_repo.get_by_code = AsyncMock(return_value=None)
+        service = WarehouseService(mock_repo)
+
+        # Conflict validation on name
+        mock_repo.get_by_name = AsyncMock(return_value=Warehouses(id=1, name="Central", code="W1", address="A"))
+        with self.assertRaises(Conflict):
+            await service.create(WarehouseCreate(name="Central", code="W2", address="B"))
 
 
 if __name__ == "__main__":

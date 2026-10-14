@@ -21,7 +21,7 @@ from app.services.category_service import CategoryService
 
 router = APIRouter(
     prefix="/categories",
-    tags=["categories"],
+    tags=["Categories"],
     dependencies=[Depends(get_current_account)],
 )
 

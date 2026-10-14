@@ -40,3 +40,9 @@ class SuppliersResponse(BaseModel):
     note: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+# Aliases for singular naming
+SupplierCreate = SuppliersCreate
+SupplierUpdate = SuppliersUpdate
+SupplierResponse = SuppliersResponse

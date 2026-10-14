@@ -1,27 +1,25 @@
+from __future__ import annotations
+
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.auth.model import Auth
+from app.repositories.base import BaseRepository
 
 
-class AuthRepository:
-    """Repository handling database operations for Auth entity."""
+class AuthRepository(BaseRepository[Auth]):
+    """Repository handling database operations for Auth entity (OOP - Inheritance)."""
 
     def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get(self, account_id: int) -> Auth | None:
-        """Find an account by ID."""
-        return await self.session.get(Auth, account_id)
+        super().__init__(session, Auth)
 
     async def get_by_id(self, account_id: int) -> Auth | None:
-        """Find an account by ID (alias for get)."""
+        """Find an account by ID (alias for base get)."""
         return await self.get(account_id)
 
     async def get_by_email(self, email: str) -> Auth | None:
-        """Find an account by email."""
-        result = await self.session.execute(select(Auth).where(Auth.email == email))
+        """Domain-specific query: find account by email."""
+        result = await self._session.execute(select(Auth).where(Auth.email == email))
         return result.scalar_one_or_none()
 
     async def create(
@@ -32,19 +30,8 @@ class AuthRepository:
         password_hash: str,
     ) -> Auth:
         """Create a new user account record."""
-        auth = Auth(
+        return await super().create(
             full_name=full_name,
             email=email,
             password_hash=password_hash,
         )
-        self.session.add(auth)
-        await self._commit()
-        await self.session.refresh(auth)
-        return auth
-
-    async def _commit(self) -> None:
-        try:
-            await self.session.commit()
-        except IntegrityError:
-            await self.session.rollback()
-            raise

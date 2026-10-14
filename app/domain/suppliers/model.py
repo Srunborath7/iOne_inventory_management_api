@@ -25,3 +25,7 @@ class Suppliers(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+
+# Alias for singular naming
+Supplier = Suppliers

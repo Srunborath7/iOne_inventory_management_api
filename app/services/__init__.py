@@ -5,6 +5,7 @@ from app.services.brand_service import BrandService
 from app.services.product_service import ProductService
 from app.services.activity_log_service import ActivityLogService
 from app.services.suppliers_service import SuppliersService
+from app.services.warehouses_service import WarehouseService, WarehousesService
 
 __all__ = [
     "BaseService",
@@ -14,5 +15,6 @@ __all__ = [
     "ProductService",
     "ActivityLogService",
     "SuppliersService",
+    "WarehouseService",
+    "WarehousesService",
 ]
-
