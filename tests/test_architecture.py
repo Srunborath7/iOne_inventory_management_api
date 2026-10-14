@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 from app.core.config import Settings
@@ -10,10 +11,17 @@ from app.domain.brands.schema import BrandCreate, BrandResponse, BrandRespone, B
 from app.domain.categories.model import Category
 from app.domain.categories.schema import CategoryCreate, CategoryResponse, CategoryRespone, CategoryUpdate
 from app.domain.products.model import Product
+from app.domain.products.schema import ProductResponse
 from app.domain.suppliers.model import Supplier, Suppliers
 from app.domain.suppliers.schema import SupplierCreate, SupplierResponse, SupplierUpdate
 from app.domain.warehouses.model import Warehouse, Warehouses
 from app.domain.warehouses.schema import WarehouseCreate, WarehouseResponse, WarehouseUpdate
+from app.domain.warehouses_inventory.model import WarehouseInventory, WarehousesInventory
+from app.domain.warehouses_inventory.schema import (
+    StockTransferRequest,
+    WarehousesInventoryCreate,
+    WarehousesInventoryResponse,
+)
 from app.repositories import (
     ActivityLogRepository,
     AuthRepository,
@@ -22,6 +30,7 @@ from app.repositories import (
     CategoryRepository,
     ProductRepository,
     SuppliersRepository,
+    WarehousesInventoryRepository,
     WarehousesRepository,
 )
 from app.services import (
@@ -33,6 +42,7 @@ from app.services import (
     ProductService,
     SuppliersService,
     WarehouseService,
+    WarehousesInventoryService,
 )
 
 
@@ -90,6 +100,12 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         self.assertTrue({"id", "name", "code", "address", "is_active", "created_at", "updated_at"}.issubset(wh_cols))
         self.assertIs(Warehouse, Warehouses)
 
+        # WarehousesInventory model checks
+        self.assertEqual(WarehousesInventory.__tablename__, "warehouse_inventory")
+        inv_cols = {c.name for c in WarehousesInventory.__table__.columns}
+        self.assertTrue({"id", "product_id", "warehouses_id", "quantity", "is_active", "created_at", "updated_at"}.issubset(inv_cols))
+        self.assertIs(WarehouseInventory, WarehousesInventory)
+
     def test_schema_aliases_and_typing(self):
         """Verify schema aliases and model instantiation."""
         self.assertIs(BrandRespone, BrandResponse)
@@ -142,6 +158,10 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(wh_repo, BaseRepository)
         self.assertIs(wh_repo.session, session_mock)
 
+        inv_repo = WarehousesInventoryRepository(session_mock)
+        self.assertIsInstance(inv_repo, BaseRepository)
+        self.assertIs(inv_repo.session, session_mock)
+
     def test_service_oop_inheritance(self):
         """Verify services inherit from BaseService."""
         session_mock = MagicMock()
@@ -152,6 +172,7 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         log_repo = ActivityLogRepository(session_mock)
         supp_repo = SuppliersRepository(session_mock)
         wh_repo = WarehousesRepository(session_mock)
+        inv_repo = WarehousesInventoryRepository(session_mock)
 
         brand_service = BrandService(brand_repo)
         self.assertIsInstance(brand_service, BaseService)
@@ -177,12 +198,77 @@ class TestOOPArchitecture(unittest.IsolatedAsyncioTestCase):
         wh_service = WarehouseService(wh_repo)
         self.assertIsInstance(wh_service, BaseService)
 
+        inv_service = WarehousesInventoryService(inv_repo)
+        self.assertIsInstance(inv_service, BaseService)
+
     def test_exceptions_oop_hierarchy(self):
         """Verify exception hierarchy adheres to OOP principles."""
         self.assertTrue(issubclass(NotFound, AppException))
         self.assertTrue(issubclass(Conflict, AppException))
         self.assertTrue(BadRequest, AppException)
         self.assertTrue(issubclass(Unauthorized, AppException))
+
+    def test_product_total_quantity_and_stock_status_calculation(self):
+        """Verify total_quantity and stock_status properties calculate properly from warehouse inventories."""
+        prod = Product(
+            id=1,
+            name="Keyboard",
+            barcode="KB-001",
+            selling_price=Decimal("50.00"),
+            cost_price=Decimal("30.00"),
+            min_stock=10,
+            max_stock=100,
+            brand_id=1,
+            category_id=1,
+        )
+
+        # Empty inventory -> 0 quantity, OUT_OF_STOCK
+        prod.inventories = []
+        self.assertEqual(prod.total_quantity, 0)
+        self.assertEqual(prod.stock_status, "OUT_OF_STOCK")
+
+        # Warehouse A: 5 units -> total 5, LOW_STOCK (<= 10)
+        inv_a = WarehousesInventory(id=1, product_id=1, warehouses_id=1, quantity=5, is_active=True)
+        prod.inventories = [inv_a]
+        self.assertEqual(prod.total_quantity, 5)
+        self.assertEqual(prod.stock_status, "LOW_STOCK")
+
+        # Warehouse B: 20 units -> total 25, IN_STOCK
+        inv_b = WarehousesInventory(id=2, product_id=1, warehouses_id=2, quantity=20, is_active=True)
+        prod.inventories = [inv_a, inv_b]
+        self.assertEqual(prod.total_quantity, 25)
+        self.assertEqual(prod.stock_status, "IN_STOCK")
+
+        # Warehouse C: 90 units -> total 115, OVERSTOCKED (> 100)
+        inv_c = WarehousesInventory(id=3, product_id=1, warehouses_id=3, quantity=90, is_active=True)
+        prod.inventories = [inv_a, inv_b, inv_c]
+        self.assertEqual(prod.total_quantity, 115)
+        self.assertEqual(prod.stock_status, "OVERSTOCKED")
+
+    async def test_warehouses_inventory_transfer_stock(self):
+        """Verify transferring stock between warehouses."""
+        mock_repo = MagicMock(spec=WarehousesInventoryRepository)
+
+        # Transferring to same warehouse should raise BadRequest
+        service = WarehousesInventoryService(mock_repo)
+        with self.assertRaises(BadRequest):
+            await service.transfer_stock(from_warehouse_id=1, to_warehouse_id=1, product_id=10, quantity=5)
+
+        # Source with insufficient stock should raise BadRequest
+        src_inv = WarehousesInventory(id=1, product_id=10, warehouses_id=1, quantity=3)
+        mock_repo.get_by_product_and_warehouse = AsyncMock(return_value=src_inv)
+        with self.assertRaises(BadRequest):
+            await service.transfer_stock(from_warehouse_id=1, to_warehouse_id=2, product_id=10, quantity=5)
+
+        # Successful transfer
+        src_inv.quantity = 10
+        dest_inv = WarehousesInventory(id=2, product_id=10, warehouses_id=2, quantity=2)
+        mock_repo.get_by_product_and_warehouse = AsyncMock(side_effect=[src_inv, dest_inv])
+        mock_repo.update = AsyncMock()
+
+        s, d = await service.transfer_stock(from_warehouse_id=1, to_warehouse_id=2, product_id=10, quantity=4)
+        mock_repo.update.assert_awaited()
+        self.assertEqual(mock_repo.update.await_count, 2)
 
     async def test_brand_service_validation(self):
         """Verify validation in BrandService."""

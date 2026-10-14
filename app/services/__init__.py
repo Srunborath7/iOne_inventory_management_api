@@ -6,6 +6,10 @@ from app.services.product_service import ProductService
 from app.services.activity_log_service import ActivityLogService
 from app.services.suppliers_service import SuppliersService
 from app.services.warehouses_service import WarehouseService, WarehousesService
+from app.services.warehouses_inventory_service import (
+    WarehouseInventoryService,
+    WarehousesInventoryService,
+)
 
 __all__ = [
     "BaseService",
@@ -17,4 +21,6 @@ __all__ = [
     "SuppliersService",
     "WarehouseService",
     "WarehousesService",
+    "WarehousesInventoryService",
+    "WarehouseInventoryService",
 ]

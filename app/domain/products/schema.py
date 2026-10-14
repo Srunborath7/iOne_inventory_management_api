@@ -47,6 +47,8 @@ class ProductResponse(BaseModel):
     brand_id: int
     category_id: int
     is_active: bool
+    total_quantity: int = 0
+    stock_status: str = "OUT_OF_STOCK"
     created_by: int | None = None
     updated_by: int | None = None
     created_at: datetime

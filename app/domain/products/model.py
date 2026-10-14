@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.domain.auth.model import Auth
     from app.domain.brands.model import Brand
     from app.domain.categories.model import Category
+    from app.domain.warehouses_inventory.model import WarehousesInventory
 
 
 class Product(Base):
@@ -55,3 +56,27 @@ class Product(Base):
     category: Mapped["Category"] = relationship(back_populates="products")
     creator: Mapped["Auth | None"] = relationship(foreign_keys=[created_by])
     updater: Mapped["Auth | None"] = relationship(foreign_keys=[updated_by])
+    inventories: Mapped[list["WarehousesInventory"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def total_quantity(self) -> int:
+        """Calculate total stock across all active warehouse inventories."""
+        inv_list = getattr(self, "inventories", None)
+        if not inv_list:
+            return 0
+        return sum(inv.quantity for inv in inv_list if getattr(inv, "is_active", True))
+
+    @property
+    def stock_status(self) -> str:
+        """Check stock health against min/max thresholds."""
+        qty = self.total_quantity
+        if qty == 0:
+            return "OUT_OF_STOCK"
+        if qty <= self.min_stock:
+            return "LOW_STOCK"
+        if self.max_stock > 0 and qty > self.max_stock:
+            return "OVERSTOCKED"
+        return "IN_STOCK"

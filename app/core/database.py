@@ -43,6 +43,7 @@ def import_all_models() -> None:
     import app.domain.activity_logs.model  # noqa: F401
     import app.domain.suppliers.model  # noqa: F401
     import app.domain.warehouses.model  # noqa: F401
+    import app.domain.warehouses_inventory.model  # noqa: F401
 
 
 async def init_db():

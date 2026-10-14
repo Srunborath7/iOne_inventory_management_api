@@ -15,7 +15,7 @@ from app.services.auth_service import (
 )
 
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(prefix="/auths", tags=["Auths"])
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
