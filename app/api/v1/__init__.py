@@ -10,6 +10,7 @@ from app.api.v1.warehouses import router as warehouses_router
 from app.api.v1.warehouses_inventory import (
     router as warehouses_inventory_router,
 )
+from app.api.v1.stock_transfers import router as stock_transfers_router
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -20,3 +21,4 @@ router.include_router(activity_logs_router)
 router.include_router(suppliers_router)
 router.include_router(warehouses_router)
 router.include_router(warehouses_inventory_router)
+router.include_router(stock_transfers_router)

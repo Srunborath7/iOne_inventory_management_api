@@ -10,6 +10,7 @@ from app.repositories.warehouses_inventory_repository import (
     WarehouseInventoryRepository,
     WarehousesInventoryRepository,
 )
+from app.repositories.stock_transfer_repository import StockTransferRepository
 
 __all__ = [
     "BaseRepository",
@@ -22,4 +23,5 @@ __all__ = [
     "WarehousesRepository",
     "WarehousesInventoryRepository",
     "WarehouseInventoryRepository",
+    "StockTransferRepository",
 ]
