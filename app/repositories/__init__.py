@@ -5,6 +5,14 @@ from app.repositories.brand_repository import BrandRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.activity_log_repository import ActivityLogRepository
 from app.repositories.suppliers_repository import SuppliersRepository
+from app.repositories.warehouses_repository import WarehousesRepository
+from app.repositories.warehouses_inventory_repository import (
+    WarehouseInventoryRepository,
+    WarehousesInventoryRepository,
+)
+from app.repositories.stock_transfer_repository import StockTransferRepository
+from app.repositories.stock_movement_repository import StockMovementRepository
+from app.repositories.customers_repository import CustomersRepository
 
 __all__ = [
     "BaseRepository",
@@ -14,5 +22,11 @@ __all__ = [
     "ProductRepository",
     "ActivityLogRepository",
     "SuppliersRepository",
+    "WarehousesRepository",
+    "WarehousesInventoryRepository",
+    "WarehouseInventoryRepository",
+    "StockTransferRepository",
+    "StockMovementRepository",
+    "CustomersRepository",
 ]
 
