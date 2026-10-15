@@ -47,6 +47,7 @@ def import_all_models() -> None:
     import app.domain.stock_transfers.model  # noqa: F401
     import app.domain.stock_movements.model  # noqa: F401
     import app.domain.customers.model
+    import app.domain.purchase.model  # noqa: F401
 
 
 async def init_db():
