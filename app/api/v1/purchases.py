@@ -136,10 +136,17 @@ async def update_purchase_return(
     return_id: int,
     payload: PurchaseReturnUpdate,
     service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
 ) -> PurchaseReturnResponse:
-    return await service.update_return(return_id, payload)
+    return await service.update_return(
+        return_id, payload, user_id=current_account.id
+    )
 
 
 @router.delete("/returns/{return_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_purchase_return(return_id: int, service: ServiceDep) -> None:
-    await service.delete_return(return_id)
+async def delete_purchase_return(
+    return_id: int,
+    service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
+) -> None:
+    await service.delete_return(return_id, user_id=current_account.id)

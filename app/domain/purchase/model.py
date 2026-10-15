@@ -66,6 +66,8 @@ class PurchaseOrderItem(Base):
         CheckConstraint("ordered_quantity > 0", name="ck_purchase_order_items_ordered_positive"),
         CheckConstraint("received_quantity >= 0", name="ck_purchase_order_items_received_nonnegative"),
         CheckConstraint("received_quantity <= ordered_quantity", name="ck_purchase_order_items_received_lte_ordered"),
+        CheckConstraint("returned_quantity >= 0", name="ck_purchase_order_items_returned_nonnegative"),
+        CheckConstraint("returned_quantity <= received_quantity", name="ck_purchase_order_items_returned_lte_received"),
         CheckConstraint("unit_cost >= 0", name="ck_purchase_order_items_unit_cost_nonnegative"),
     )
 
@@ -78,6 +80,7 @@ class PurchaseOrderItem(Base):
     )
     ordered_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     received_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    returned_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
     purchase_order: Mapped[PurchaseOrder] = relationship(back_populates="items")
@@ -125,6 +128,9 @@ class PurchaseReturnItem(Base):
     purchase_return_id: Mapped[int] = mapped_column(
         ForeignKey("purchase_returns.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    purchase_order_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("purchase_order_items.id", ondelete="RESTRICT"), index=True
+    )
     product_id: Mapped[int] = mapped_column(
         ForeignKey("products.id", ondelete="RESTRICT"), nullable=False, index=True
     )
@@ -132,4 +138,5 @@ class PurchaseReturnItem(Base):
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
     purchase_return: Mapped[PurchaseReturn] = relationship(back_populates="items")
+    purchase_order_item: Mapped[PurchaseOrderItem | None] = relationship()
     product: Mapped["Product"] = relationship()

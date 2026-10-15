@@ -112,35 +112,54 @@ class PurchaseService(BaseService[PurchaseRepository]):
         if data.returned_at is not None:
             values["returned_at"] = data.returned_at
         values["created_by"] = user_id
-        return await self.repository.create_return(
-            header=values,
-            items=[item.model_dump() for item in data.items],
-        )
+        try:
+            return await self.repository.create_return(
+                header=values,
+                items=[item.model_dump() for item in data.items],
+                user_id=user_id,
+            )
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
 
     async def update_return(
-        self, return_id: int, data: PurchaseReturnUpdate
+        self,
+        return_id: int,
+        data: PurchaseReturnUpdate,
+        user_id: int | None = None,
     ) -> PurchaseReturn:
         changes = data.model_dump(exclude_unset=True)
         items = changes.pop("items", None)
         if not changes and items is None:
             raise BadRequest("Provide at least one field to update")
-        for field in ("return_number", "supplier_id"):
+        for field in ("return_number",):
             if field in changes and changes[field] is None:
                 raise BadRequest(f"{field} cannot be null")
+        if "returned_at" in changes and changes["returned_at"] is None:
+            raise BadRequest("returned_at cannot be null")
         if "return_number" in changes and await self.repository.return_number_exists_for_other(
             changes["return_number"], return_id
         ):
             raise Conflict("Purchase return number already exists")
         item_values = None if items is None else [item.model_dump() for item in items]
-        purchase_return = await self.repository.update_return(
-            return_id, changes=changes, items=item_values
-        )
+        try:
+            purchase_return = await self.repository.update_return(
+                return_id,
+                changes=changes,
+                items=item_values,
+                user_id=user_id,
+            )
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
         if purchase_return is None:
             raise NotFound("Purchase return")
         return purchase_return
 
-    async def delete_return(self, return_id: int) -> None:
-        if not await self.repository.delete_return(return_id):
+    async def delete_return(self, return_id: int, user_id: int | None = None) -> None:
+        try:
+            deleted = await self.repository.delete_return(return_id, user_id=user_id)
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
+        if not deleted:
             raise NotFound("Purchase return")
 
     async def get_return(self, return_id: int) -> PurchaseReturn:

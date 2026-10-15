@@ -1,8 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
 
-from typing import Literal
-
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
 
@@ -36,6 +34,7 @@ class PurchaseOrderItemResponse(PurchaseOrderItemCreate):
 
     id: int
     received_quantity: int
+    returned_quantity: int
 
 
 class PurchaseOrderResponse(BaseModel):
@@ -59,10 +58,6 @@ class PurchaseOrderResponse(BaseModel):
     items: list[PurchaseOrderItemResponse]
 
 
-class PurchaseOrderReady(BaseModel):
-    status: Literal["ready"] = "ready"
-
-
 class PurchaseOrderReceiptItem(BaseModel):
     item_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
@@ -80,6 +75,7 @@ class PurchaseOrderReceive(BaseModel):
 
 
 class PurchaseReturnItemCreate(BaseModel):
+    purchase_order_item_id: int = Field(gt=0)
     product_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
     unit_cost: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
@@ -88,25 +84,42 @@ class PurchaseReturnItemCreate(BaseModel):
 class PurchaseReturnCreate(BaseModel):
     return_number: str = Field(min_length=1, max_length=50)
     supplier_id: int = Field(gt=0)
-    purchase_order_id: int | None = Field(default=None, gt=0)
+    purchase_order_id: int = Field(gt=0)
     returned_at: datetime | None = None
     reason: str | None = None
     items: list[PurchaseReturnItemCreate] = Field(min_length=1)
 
+    @model_validator(mode="after")
+    def purchase_order_items_are_unique(self):
+        line_ids = [item.purchase_order_item_id for item in self.items]
+        if len(line_ids) != len(set(line_ids)):
+            raise ValueError("Each purchase order item can appear only once per return")
+        return self
+
 
 class PurchaseReturnUpdate(BaseModel):
     return_number: str | None = Field(default=None, min_length=1, max_length=50)
-    supplier_id: int | None = Field(default=None, gt=0)
-    purchase_order_id: int | None = Field(default=None, gt=0)
     returned_at: datetime | None = None
     reason: str | None = None
     items: list[PurchaseReturnItemCreate] | None = Field(default=None, min_length=1)
 
+    @model_validator(mode="after")
+    def purchase_order_items_are_unique(self):
+        if self.items is not None:
+            line_ids = [item.purchase_order_item_id for item in self.items]
+            if len(line_ids) != len(set(line_ids)):
+                raise ValueError("Each purchase order item can appear only once per return")
+        return self
 
-class PurchaseReturnItemResponse(PurchaseReturnItemCreate):
+
+class PurchaseReturnItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    purchase_order_item_id: int | None
+    product_id: int
+    quantity: int
+    unit_cost: Decimal
 
 
 class PurchaseReturnResponse(BaseModel):
