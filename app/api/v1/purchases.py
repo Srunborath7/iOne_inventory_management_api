@@ -10,8 +10,10 @@ from app.domain.purchase.schema import (
     PurchaseOrderCreate,
     PurchaseOrderReceive,
     PurchaseOrderResponse,
+    PurchaseOrderUpdate,
     PurchaseReturnCreate,
     PurchaseReturnResponse,
+    PurchaseReturnUpdate,
 )
 from app.repositories.purchase_repository import PurchaseRepository
 from app.services.purchase_service import PurchaseService
@@ -57,6 +59,22 @@ async def list_purchase_orders(
 @router.get("/orders/{order_id}", response_model=PurchaseOrderResponse)
 async def get_purchase_order(order_id: int, service: ServiceDep) -> PurchaseOrderResponse:
     return await service.get_order(order_id)
+
+
+@router.patch("/orders/{order_id}", response_model=PurchaseOrderResponse)
+async def update_purchase_order(
+    order_id: int,
+    payload: PurchaseOrderUpdate,
+    service: ServiceDep,
+) -> PurchaseOrderResponse:
+    """Edit a draft purchase order and optionally replace its lines."""
+    return await service.update_order(order_id, payload)
+
+
+@router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_purchase_order(order_id: int, service: ServiceDep) -> None:
+    """Delete a draft purchase order."""
+    await service.delete_order(order_id)
 
 
 @router.post("/orders/{order_id}/ready", response_model=PurchaseOrderResponse)
@@ -111,3 +129,17 @@ async def list_purchase_returns(
 @router.get("/returns/{return_id}", response_model=PurchaseReturnResponse)
 async def get_purchase_return(return_id: int, service: ServiceDep) -> PurchaseReturnResponse:
     return await service.get_return(return_id)
+
+
+@router.patch("/returns/{return_id}", response_model=PurchaseReturnResponse)
+async def update_purchase_return(
+    return_id: int,
+    payload: PurchaseReturnUpdate,
+    service: ServiceDep,
+) -> PurchaseReturnResponse:
+    return await service.update_return(return_id, payload)
+
+
+@router.delete("/returns/{return_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_purchase_return(return_id: int, service: ServiceDep) -> None:
+    await service.delete_return(return_id)

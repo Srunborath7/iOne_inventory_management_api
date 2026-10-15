@@ -9,9 +9,11 @@ from app.domain.purchase.schema import (
     PurchaseOrderItemCreate,
     PurchaseOrderReceive,
     PurchaseOrderResponse,
+    PurchaseOrderUpdate,
     PurchaseReturnCreate,
     PurchaseReturnItemCreate,
     PurchaseReturnResponse,
+    PurchaseReturnUpdate,
 )
 
 __all__ = [
@@ -23,7 +25,9 @@ __all__ = [
     "PurchaseOrderItemCreate",
     "PurchaseOrderReceive",
     "PurchaseOrderResponse",
+    "PurchaseOrderUpdate",
     "PurchaseReturnCreate",
     "PurchaseReturnItemCreate",
     "PurchaseReturnResponse",
+    "PurchaseReturnUpdate",
 ]

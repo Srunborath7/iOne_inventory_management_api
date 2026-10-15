@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
 
 class PurchaseOrderItemCreate(BaseModel):
@@ -22,6 +22,15 @@ class PurchaseOrderCreate(BaseModel):
     items: list[PurchaseOrderItemCreate] = Field(min_length=1)
 
 
+class PurchaseOrderUpdate(BaseModel):
+    order_number: str | None = Field(default=None, min_length=1, max_length=50)
+    supplier_id: int | None = Field(default=None, gt=0)
+    warehouse_id: int | None = Field(default=None, gt=0)
+    expected_at: datetime | None = None
+    note: str | None = None
+    items: list[PurchaseOrderItemCreate] | None = Field(default=None, min_length=1)
+
+
 class PurchaseOrderItemResponse(PurchaseOrderItemCreate):
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,7 +44,11 @@ class PurchaseOrderResponse(BaseModel):
     id: int
     order_number: str
     supplier_id: int
+    supplier_name: str = Field(validation_alias=AliasPath("supplier", "name"))
     warehouse_id: int | None
+    warehouse_name: str | None = Field(
+        default=None, validation_alias=AliasPath("warehouse", "name")
+    )
     status: str
     ordered_at: datetime
     expected_at: datetime | None
@@ -81,6 +94,15 @@ class PurchaseReturnCreate(BaseModel):
     items: list[PurchaseReturnItemCreate] = Field(min_length=1)
 
 
+class PurchaseReturnUpdate(BaseModel):
+    return_number: str | None = Field(default=None, min_length=1, max_length=50)
+    supplier_id: int | None = Field(default=None, gt=0)
+    purchase_order_id: int | None = Field(default=None, gt=0)
+    returned_at: datetime | None = None
+    reason: str | None = None
+    items: list[PurchaseReturnItemCreate] | None = Field(default=None, min_length=1)
+
+
 class PurchaseReturnItemResponse(PurchaseReturnItemCreate):
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,6 +115,7 @@ class PurchaseReturnResponse(BaseModel):
     id: int
     return_number: str
     supplier_id: int
+    supplier_name: str = Field(validation_alias=AliasPath("supplier", "name"))
     purchase_order_id: int | None
     returned_at: datetime
     reason: str | None

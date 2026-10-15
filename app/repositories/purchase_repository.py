@@ -22,9 +22,31 @@ class PurchaseRepository:
         )
         return result.scalar_one_or_none() is not None
 
+    async def order_number_exists_for_other(
+        self, order_number: str, order_id: int
+    ) -> bool:
+        result = await self._session.execute(
+            select(PurchaseOrder.id).where(
+                PurchaseOrder.order_number == order_number,
+                PurchaseOrder.id != order_id,
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
     async def return_number_exists(self, return_number: str) -> bool:
         result = await self._session.execute(
             select(PurchaseReturn.id).where(PurchaseReturn.return_number == return_number)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def return_number_exists_for_other(
+        self, return_number: str, return_id: int
+    ) -> bool:
+        result = await self._session.execute(
+            select(PurchaseReturn.id).where(
+                PurchaseReturn.return_number == return_number,
+                PurchaseReturn.id != return_id,
+            )
         )
         return result.scalar_one_or_none() is not None
 
@@ -38,10 +60,54 @@ class PurchaseRepository:
     async def get_order(self, order_id: int) -> PurchaseOrder | None:
         result = await self._session.execute(
             select(PurchaseOrder)
-            .options(selectinload(PurchaseOrder.items))
+            .options(
+                selectinload(PurchaseOrder.items),
+                selectinload(PurchaseOrder.supplier),
+                selectinload(PurchaseOrder.warehouse),
+            )
             .where(PurchaseOrder.id == order_id)
         )
         return result.scalar_one_or_none()
+
+    async def update_order(
+        self,
+        order_id: int,
+        *,
+        changes: dict,
+        items: list[dict] | None,
+    ) -> PurchaseOrder | None:
+        result = await self._session.execute(
+            select(PurchaseOrder)
+            .options(selectinload(PurchaseOrder.items))
+            .where(PurchaseOrder.id == order_id)
+            .with_for_update()
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            return None
+        if order.status != "draft":
+            raise ValueError("Only draft purchase orders can be edited")
+        for field, value in changes.items():
+            setattr(order, field, value)
+        if items is not None:
+            order.items = [PurchaseOrderItem(**item) for item in items]
+        await self._commit()
+        return await self.get_order(order_id)
+
+    async def delete_order(self, order_id: int) -> bool:
+        result = await self._session.execute(
+            select(PurchaseOrder)
+            .where(PurchaseOrder.id == order_id)
+            .with_for_update()
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            return False
+        if order.status != "draft":
+            raise ValueError("Only draft purchase orders can be deleted")
+        await self._session.delete(order)
+        await self._commit()
+        return True
 
     async def mark_order_ready(self, order_id: int) -> PurchaseOrder | None:
         result = await self._session.execute(
@@ -130,7 +196,11 @@ class PurchaseRepository:
         offset: int = 0,
         limit: int = 100,
     ) -> list[PurchaseOrder]:
-        stmt = select(PurchaseOrder).options(selectinload(PurchaseOrder.items))
+        stmt = select(PurchaseOrder).options(
+            selectinload(PurchaseOrder.items),
+            selectinload(PurchaseOrder.supplier),
+            selectinload(PurchaseOrder.warehouse),
+        )
         if supplier_id is not None:
             stmt = stmt.where(PurchaseOrder.supplier_id == supplier_id)
         if status is not None:
@@ -150,10 +220,47 @@ class PurchaseRepository:
     async def get_return(self, return_id: int) -> PurchaseReturn | None:
         result = await self._session.execute(
             select(PurchaseReturn)
-            .options(selectinload(PurchaseReturn.items))
+            .options(
+                selectinload(PurchaseReturn.items),
+                selectinload(PurchaseReturn.supplier),
+            )
             .where(PurchaseReturn.id == return_id)
         )
         return result.scalar_one_or_none()
+
+    async def update_return(
+        self,
+        return_id: int,
+        *,
+        changes: dict,
+        items: list[dict] | None,
+    ) -> PurchaseReturn | None:
+        result = await self._session.execute(
+            select(PurchaseReturn)
+            .options(
+                selectinload(PurchaseReturn.items),
+                selectinload(PurchaseReturn.supplier),
+            )
+            .where(PurchaseReturn.id == return_id)
+            .with_for_update()
+        )
+        purchase_return = result.scalar_one_or_none()
+        if purchase_return is None:
+            return None
+        for field, value in changes.items():
+            setattr(purchase_return, field, value)
+        if items is not None:
+            purchase_return.items = [PurchaseReturnItem(**item) for item in items]
+        await self._commit()
+        return await self.get_return(return_id)
+
+    async def delete_return(self, return_id: int) -> bool:
+        purchase_return = await self._session.get(PurchaseReturn, return_id)
+        if purchase_return is None:
+            return False
+        await self._session.delete(purchase_return)
+        await self._commit()
+        return True
 
     async def list_returns(
         self,
@@ -163,7 +270,10 @@ class PurchaseRepository:
         offset: int = 0,
         limit: int = 100,
     ) -> list[PurchaseReturn]:
-        stmt = select(PurchaseReturn).options(selectinload(PurchaseReturn.items))
+        stmt = select(PurchaseReturn).options(
+            selectinload(PurchaseReturn.items),
+            selectinload(PurchaseReturn.supplier),
+        )
         if supplier_id is not None:
             stmt = stmt.where(PurchaseReturn.supplier_id == supplier_id)
         if purchase_order_id is not None:
