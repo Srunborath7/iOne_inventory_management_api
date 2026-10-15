@@ -19,7 +19,6 @@ router = APIRouter(
     dependencies=[Depends(get_current_account)],
 )
 
-
 def get_service(session: Annotated[AsyncSession, Depends(get_db)]) -> CustomersService:
     return CustomersService(CustomersRepository(session))
 
