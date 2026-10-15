@@ -25,6 +25,10 @@ LATER_REVISION_TABLES = {
     "stock_transfers",
     "stock_movements",
     "customers",
+    "purchase_orders",
+    "purchase_order_items",
+    "purchase_returns",
+    "purchase_return_items",
 }
 
 
