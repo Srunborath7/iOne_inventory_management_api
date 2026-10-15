@@ -2,12 +2,9 @@ services:
   # FastAPI Web Service on Render
   - type: web
     name: inventory-management-api
-    runtime: python
+    runtime: docker
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
-    preDeployCommand: alembic upgrade head
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     envVars:
       - key: DATABASE_URL

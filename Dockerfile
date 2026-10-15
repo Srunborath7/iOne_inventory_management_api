@@ -19,5 +19,6 @@ RUN mkdir -p /app/uploads
 # Expose default port
 EXPOSE 8000
 
-# Start Uvicorn with dynamic PORT assigned by Render
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run migrations before starting the API. This also works on Render's free plan,
+# where a separate pre-deploy command is unavailable.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

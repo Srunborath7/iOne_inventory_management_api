@@ -8,8 +8,8 @@ This project is fully prepared and optimized for deployment on [Render](https://
 
 1. **Supabase Database Connection**:
    Set `DATABASE_URL` in Render to your Supabase PostgreSQL connection string. The app converts `postgres://` or `postgresql://` to the async SQLAlchemy format and enables SSL for Supabase.
-2. **Pre-Deploy Database Migrations**:
-   Alembic migrations run safely during Render's `preDeployCommand` (`alembic upgrade head`) before traffic is routed to the new deployment, preventing race conditions.
+2. **Database Migrations**:
+   The Docker image runs `alembic upgrade head` before starting Uvicorn. This works on Render's free plan, where a separate pre-deploy command is unavailable.
 3. **Health Check Endpoint**:
    The `/healthz` endpoint performs an async database ping (`SELECT 1`) and reports health status, satisfying Render's zero-downtime health check requirements.
 4. **Configurable CORS**:
@@ -31,8 +31,8 @@ The repository includes a [`render.yaml`](render.yaml) Blueprint for the Web Ser
    - The FastAPI web service (`inventory-management-api`).
    - An automatically generated `JWT_SECRET_KEY`.
    - A prompt for the Supabase `DATABASE_URL`.
-   - The migration pre-deploy command and health check path (`/healthz`).
-6. For `DATABASE_URL`, paste the Supabase PostgreSQL connection string. Prefer the **Direct connection** URL if Render can reach it. If using Supabase's **Session pooler**, use its connection string and port. Avoid the transaction pooler (port `6543`) for migrations; use a direct or session connection. Click **Apply**. Render will run `alembic upgrade head` against that Supabase database before deploying the API.
+   - The health check path (`/healthz`).
+6. For `DATABASE_URL`, paste the Supabase PostgreSQL connection string. Prefer the **Direct connection** URL if Render can reach it. If using Supabase's **Session pooler**, use its connection string and port. Click **Apply**. On startup, the Docker container will run `alembic upgrade head` against that Supabase database before starting the API.
 
 ---
 
@@ -50,10 +50,8 @@ In Supabase, open **Project Settings -> Database -> Connection string** and copy
    - **Name**: `inventory-management-api`
    - **Region**: Choose the same region as your database (e.g., Oregon or Frankfurt).
    - **Branch**: `main`
-   - **Runtime**: `Python`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Pre-Deploy Command**: `alembic upgrade head`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Runtime**: `Docker`
+   - The Dockerfile installs dependencies and runs migrations before starting Uvicorn.
    - **Health Check Path**: `/healthz`
 
 ### Step 3: Add Environment Variables
@@ -64,7 +62,7 @@ Under the **Environment** tab, add:
 | `JWT_SECRET_KEY` | `your-32-character-secret` | Random secret key for signing JWTs |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` | Token expiration in minutes (e.g., 7 days) |
 | `CORS_ORIGINS` | `*` or your frontend URLs | Comma-separated allowed origins |
-| `AUTO_MIGRATE` | `false` | Migrations are executed via Pre-Deploy Command |
+| `AUTO_MIGRATE` | `false` | Alembic runs in the Docker startup command before Uvicorn |
 | `DATABASE_ECHO` | `false` | Keep query logging quiet in production |
 | `ENVIRONMENT` | `production` | Environment name |
 
@@ -80,7 +78,7 @@ Render also natively supports deploying from the provided [`Dockerfile`](file://
 2. Select your repository.
 3. Select **Docker** as the Environment.
 4. Add the same Environment Variables as in Option 2.
-5. Click **Create Web Service**. Set **Pre-Deploy Command** to `alembic upgrade head` in the Render service settings; the Dockerfile itself only starts the API.
+5. Click **Create Web Service**. The Dockerfile runs `alembic upgrade head` before starting Uvicorn, including on Render's free plan.
 
 ---
 
