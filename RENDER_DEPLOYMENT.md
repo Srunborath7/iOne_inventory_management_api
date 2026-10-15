@@ -9,7 +9,7 @@ This project is fully prepared and optimized for deployment on [Render](https://
 1. **Supabase Database Connection**:
    Set `DATABASE_URL` in Render to your Supabase PostgreSQL connection string. The app converts `postgres://` or `postgresql://` to the async SQLAlchemy format and enables SSL for Supabase.
 2. **Database Migrations**:
-   The Docker image runs `alembic upgrade head` before starting Uvicorn. This works on Render's free plan, where a separate pre-deploy command is unavailable.
+   The Docker image applies Alembic migrations before starting Uvicorn. If the database has the complete existing schema for revisions 001–006 but no Alembic version row, it records revision 006 and applies later migrations. Unexpected partial schemas stop startup for review.
 3. **Health Check Endpoint**:
    The `/healthz` endpoint performs an async database ping (`SELECT 1`) and reports health status, satisfying Render's zero-downtime health check requirements.
 4. **Configurable CORS**:
