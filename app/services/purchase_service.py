@@ -1,4 +1,4 @@
-from app.core.exceptions import Conflict, NotFound
+from app.core.exceptions import BadRequest, Conflict, NotFound
 from app.domain.purchase.model import PurchaseOrder, PurchaseReturn
 from app.domain.purchase.schema import PurchaseOrderCreate, PurchaseReturnCreate
 from app.repositories.purchase_repository import PurchaseRepository
@@ -22,6 +22,33 @@ class PurchaseService(BaseService[PurchaseRepository]):
 
     async def get_order(self, order_id: int) -> PurchaseOrder:
         order = await self.repository.get_order(order_id)
+        if order is None:
+            raise NotFound("Purchase order")
+        return order
+
+    async def mark_order_ready(self, order_id: int) -> PurchaseOrder:
+        try:
+            order = await self.repository.mark_order_ready(order_id)
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
+        if order is None:
+            raise NotFound("Purchase order")
+        return order
+
+    async def receive_order(
+        self,
+        order_id: int,
+        item_quantities: dict[int, int],
+        user_id: int | None,
+    ) -> PurchaseOrder:
+        try:
+            order = await self.repository.receive_order(
+                order_id,
+                item_quantities=item_quantities,
+                user_id=user_id,
+            )
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
         if order is None:
             raise NotFound("Purchase order")
         return order

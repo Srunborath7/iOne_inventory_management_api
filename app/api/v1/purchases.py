@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.domain.auth.model import Auth
 from app.domain.purchase.schema import (
     PurchaseOrderCreate,
+    PurchaseOrderReceive,
     PurchaseOrderResponse,
     PurchaseReturnCreate,
     PurchaseReturnResponse,
@@ -56,6 +57,28 @@ async def list_purchase_orders(
 @router.get("/orders/{order_id}", response_model=PurchaseOrderResponse)
 async def get_purchase_order(order_id: int, service: ServiceDep) -> PurchaseOrderResponse:
     return await service.get_order(order_id)
+
+
+@router.post("/orders/{order_id}/ready", response_model=PurchaseOrderResponse)
+async def mark_purchase_order_ready(
+    order_id: int, service: ServiceDep
+) -> PurchaseOrderResponse:
+    """Mark a draft order as ready to receive at its destination warehouse."""
+    return await service.mark_order_ready(order_id)
+
+
+@router.post("/orders/{order_id}/receive", response_model=PurchaseOrderResponse)
+async def receive_purchase_order(
+    order_id: int,
+    payload: PurchaseOrderReceive,
+    service: ServiceDep,
+    current_account: Annotated[Auth, Depends(get_current_account)],
+) -> PurchaseOrderResponse:
+    """Receive order item quantities and add them to the selected warehouse."""
+    quantities = {item.item_id: item.quantity for item in payload.items}
+    return await service.receive_order(
+        order_id, quantities, user_id=current_account.id
+    )
 
 
 @router.post(

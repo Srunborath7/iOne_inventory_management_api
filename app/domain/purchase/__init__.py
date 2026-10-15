@@ -7,6 +7,7 @@ from app.domain.purchase.model import (
 from app.domain.purchase.schema import (
     PurchaseOrderCreate,
     PurchaseOrderItemCreate,
+    PurchaseOrderReceive,
     PurchaseOrderResponse,
     PurchaseReturnCreate,
     PurchaseReturnItemCreate,
@@ -20,6 +21,7 @@ __all__ = [
     "PurchaseReturnItem",
     "PurchaseOrderCreate",
     "PurchaseOrderItemCreate",
+    "PurchaseOrderReceive",
     "PurchaseOrderResponse",
     "PurchaseReturnCreate",
     "PurchaseReturnItemCreate",

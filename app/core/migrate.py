@@ -61,7 +61,7 @@ def main() -> None:
         if base_tables != BASE_REVISION_TABLES or later_tables:
             raise RuntimeError(
                 "Database has an untracked partial schema. Expected all tables "
-                "from revisions 001-006 and none from 007-011 before adopting "
+                "from revisions 001-006 and none from 007 onward before adopting "
                 f"revision 006. Found base tables: {sorted(base_tables)}; "
                 f"later tables: {sorted(later_tables)}. Resolve the schema "
                 "before running migrations."

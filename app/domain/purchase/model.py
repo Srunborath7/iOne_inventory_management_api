@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.domain.auth.model import Auth
     from app.domain.products.model import Product
     from app.domain.suppliers.model import Suppliers
+    from app.domain.warehouses.model import Warehouses
 
 
 class PurchaseOrder(Base):
@@ -31,6 +32,9 @@ class PurchaseOrder(Base):
     order_number: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     supplier_id: Mapped[int] = mapped_column(
         ForeignKey("suppliers.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    warehouse_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="RESTRICT"), index=True
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft", server_default="draft")
     ordered_at: Mapped[datetime] = mapped_column(
@@ -49,6 +53,7 @@ class PurchaseOrder(Base):
     )
 
     supplier: Mapped["Suppliers"] = relationship()
+    warehouse: Mapped["Warehouses | None"] = relationship()
     creator: Mapped["Auth | None"] = relationship()
     items: Mapped[list[PurchaseOrderItem]] = relationship(
         back_populates="purchase_order", cascade="all, delete-orphan"

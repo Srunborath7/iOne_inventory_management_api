@@ -1,6 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domain.purchase.model import (
     PurchaseOrder,
@@ -8,6 +9,7 @@ from app.domain.purchase.model import (
     PurchaseReturn,
     PurchaseReturnItem,
 )
+from app.domain.warehouses_inventory.model import WarehousesInventory
 
 
 class PurchaseRepository:
@@ -40,6 +42,85 @@ class PurchaseRepository:
             .where(PurchaseOrder.id == order_id)
         )
         return result.scalar_one_or_none()
+
+    async def mark_order_ready(self, order_id: int) -> PurchaseOrder | None:
+        result = await self._session.execute(
+            select(PurchaseOrder)
+            .options(selectinload(PurchaseOrder.items))
+            .where(PurchaseOrder.id == order_id)
+            .with_for_update()
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            return None
+        if order.status != "draft":
+            raise ValueError(f"Cannot mark a purchase order ready from status '{order.status}'")
+        order.status = "ready"
+        await self._commit()
+        return await self.get_order(order_id)
+
+    async def receive_order(
+        self,
+        order_id: int,
+        *,
+        item_quantities: dict[int, int],
+        user_id: int | None,
+    ) -> PurchaseOrder | None:
+        result = await self._session.execute(
+            select(PurchaseOrder)
+            .options(selectinload(PurchaseOrder.items))
+            .where(PurchaseOrder.id == order_id)
+            .with_for_update()
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            return None
+        if order.status not in {"ready", "partially_received"}:
+            raise ValueError("Only ready or partially received purchase orders can be received")
+        if order.warehouse_id is None:
+            raise ValueError("Purchase order has no destination warehouse")
+
+        order_items = {item.id: item for item in order.items}
+        for item_id, quantity in item_quantities.items():
+            item = order_items.get(item_id)
+            if item is None:
+                raise ValueError(f"Purchase order item {item_id} does not belong to this order")
+            if item.received_quantity + quantity > item.ordered_quantity:
+                remaining = item.ordered_quantity - item.received_quantity
+                raise ValueError(
+                    f"Item {item_id} can receive at most {remaining} more units"
+                )
+
+        for item_id, quantity in item_quantities.items():
+            item = order_items[item_id]
+            item.received_quantity += quantity
+            inventory_insert = pg_insert(WarehousesInventory).values(
+                product_id=item.product_id,
+                warehouses_id=order.warehouse_id,
+                quantity=quantity,
+                created_by=user_id,
+                updated_by=user_id,
+                is_active=True,
+            )
+            await self._session.execute(
+                inventory_insert.on_conflict_do_update(
+                    index_elements=["product_id", "warehouses_id"],
+                    set_={
+                        "quantity": WarehousesInventory.quantity + quantity,
+                        "updated_by": user_id,
+                        "updated_at": func.now(),
+                        "is_active": True,
+                    },
+                )
+            )
+
+        order.status = (
+            "received"
+            if all(item.received_quantity == item.ordered_quantity for item in order.items)
+            else "partially_received"
+        )
+        await self._commit()
+        return await self.get_order(order_id)
 
     async def list_orders(
         self,
